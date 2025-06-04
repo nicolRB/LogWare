@@ -12,6 +12,7 @@
     "bcrypt": "^6.0.0",
     "crypto": "^1.0.1",
     "express-validator": "^7.2.1",
+    "firebase": "^11.8.1",
     "helmet": "^8.1.0",
     "next": "15.3.3",
     "react": "^19.0.0",

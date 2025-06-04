@@ -1,0 +1,9 @@
+const mongoose = require('mongoose')
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true }, // hashed com bcrypt
+  role: { type: String, enum: ['colaborador', 'gerente', 'diretor'], default: 'colaborador' },
+})
+
+module.exports = mongoose.model('User', userSchema)

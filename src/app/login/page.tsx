@@ -12,6 +12,7 @@ import {
   Alert,
 } from "@mui/material";
 import { login } from "@/lib/login";
+import Cookies from "js-cookie"; // Importa a biblioteca de cookies
 
 export default function LoginPage() {
   const [email, setEmail] = useState("admin@admin.com");
@@ -25,7 +26,13 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const token = await login(email, password);
+
+      // Salva o token em um cookie que expira em 1 dia
+      Cookies.set("token", token, { expires: 1 });
+
+      // Você ainda pode manter no localStorage se outras partes do app usarem
       localStorage.setItem("token", token);
+
       router.push("/dashboard");
     } catch (err: unknown) {
       console.error("Erro no processo de login na página:", err);

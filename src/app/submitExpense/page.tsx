@@ -1,58 +1,98 @@
 "use client";
 
-import {useState} from "react";
-import {enviarRelatorio} from "@/services/relatorioService";
-import {TextField, Button, Container, Typography, Box} from "@mui/material";
+import { useState } from "react";
+import {
+  TextField,
+  Button,
+  Container,
+  Typography,
+  Box,
+  Alert,
+} from "@mui/material";
+import Link from "next/link";
 
 export default function SubmitExpensePage() {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState<number | "">("");
   const [mensagem, setMensagem] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMensagem("");
+    setError("");
+    setLoading(true);
 
     if (!descricao || valor === "") {
-      setMensagem("Por favor, preencha a descrição e o valor do relatório.");
+      setError("Por favor, preencha a descrição e o valor do relatório.");
+      setLoading(false);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Você não está autenticado. Por favor, faça o login novamente.");
+      setLoading(false);
       return;
     }
 
     try {
-      await enviarRelatorio({descricao, valor: Number(valor)});
+      // Faz a requisição para a API do backend
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/reports`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // Envia o token para autenticação
+          },
+          body: JSON.stringify({
+            descricao,
+            valor: Number(valor),
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Falha ao enviar relatório.");
+      }
+
       setMensagem("Relatório de despesa enviado com sucesso!");
       setDescricao("");
       setValor("");
-    } catch (error: unknown) {
-      console.error("Erro ao tentar enviar o relatório:", error);
-
-      let errorMessageForUser = "Erro ao enviar relatório. Tente novamente.";
-
-      if (error instanceof Error) {
-        errorMessageForUser = `Erro na submissão: ${error.message}`;
-      } else if (typeof error === "string") {
-        errorMessageForUser = `Erro na submissão: ${error}`;
-      } else {
-        errorMessageForUser = `Erro na submissão: ${String(error)}`;
-      }
-
-      setMensagem(errorMessageForUser);
+    } catch (err: unknown) {
+      console.error("Erro ao tentar enviar o relatório:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
+      setError(`Erro na submissão: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{py: 5, mt: 8}}>
-      {" "}
-      {/* Use 'sx' para estilos MUI */}
-      <Typography variant="h4" component="h1" sx={{mb: 3, textAlign: "center"}}>
+    <Container maxWidth="sm" sx={{ py: 5, mt: 8 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ mb: 3, textAlign: "center" }}
+      >
         Submissão de Relatório de Despesa
       </Typography>
-      {/* Exibição de mensagens (sucesso ou erro) */}
+
       {mensagem && (
-        <Typography color={mensagem.includes("sucesso") ? "primary" : "error"} sx={{mb: 2, textAlign: "center"}}>
+        <Alert severity="success" sx={{ mb: 2 }}>
           {mensagem}
-        </Typography>
+        </Alert>
       )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -66,22 +106,41 @@ export default function SubmitExpensePage() {
           bgcolor: "background.paper",
         }}
       >
-        <TextField label="Descrição da Despesa" fullWidth value={descricao} onChange={(e) => setDescricao(e.target.value)} required />
+        <TextField
+          label="Descrição da Despesa"
+          fullWidth
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          required
+        />
         <TextField
           label="Valor da Despesa"
           type="number"
           fullWidth
           value={valor}
-          onChange={(e) => setValor(e.target.value === "" ? "" : Number(e.target.value))}
-          inputProps={{step: "0.01"}}
+          onChange={(e) =>
+            setValor(e.target.value === "" ? "" : Number(e.target.value))
+          }
+          inputProps={{ step: "0.01" }}
           required
         />
-        {/* Futuramente, você pode adicionar um campo para upload de recibos aqui */}
-        {/* <input type="file" onChange={handleFileChange} /> */}
-
-        <Button type="submit" variant="contained" color="primary" fullWidth>
-          Enviar Relatório
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          fullWidth
+          disabled={loading}
+        >
+          {loading ? "Enviando..." : "Enviar Relatório"}
         </Button>
+      </Box>
+
+      <Box sx={{ mt: 4, textAlign: "center" }}>
+        <Link href="/dashboard" passHref legacyBehavior>
+          <Button variant="text" color="info">
+            Voltar ao Dashboard
+          </Button>
+        </Link>
       </Box>
     </Container>
   );

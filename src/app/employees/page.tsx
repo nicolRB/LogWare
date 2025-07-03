@@ -1,7 +1,7 @@
 // src/app/employees/page.tsx
-"use client"; // Esta página provavelmente precisará de Client Components para o CRUD
+"use client";
 
-import {useState, useEffect} from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -13,147 +13,234 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import Link from "next/link";
 
-// Assumindo uma interface básica para funcionário
 interface Employee {
-  _id: string; // ou 'id' dependendo do seu backend
+  _id: string;
   name: string;
   email: string;
-  role: string; // Ex: "colaborador", "gerente", "diretor"
+  role: string;
 }
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [newEmployee, setNewEmployee] = useState({name: "", email: "", role: ""});
+  const [newEmployee, setNewEmployee] = useState({
+    name: "",
+    email: "",
+    role: "",
+    password: "",
+  });
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  // Função para carregar funcionários (simulada por enquanto)
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        // Implementar fetch para sua API de backend para listar funcionários
-        // Ex: const token = localStorage.getItem('token');
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/employees`, {
-        //   headers: { 'Authorization': `Bearer ${token}` }
-        // });
-        // if (!res.ok) throw new Error('Falha ao carregar funcionários');
-        // const data = await res.json();
-        // setEmployees(data); // Assumindo que a API retorna um array de funcionários
-
-        // Simulação de dados para o build passar
-        setEmployees([
-          {_id: "1", name: "João Silva", email: "joao@empresa.com", role: "colaborador"},
-          {_id: "2", name: "Maria Souza", email: "maria@empresa.com", role: "gerente"},
-        ]);
-      } catch (err: unknown) {
-        console.error("Erro ao carregar funcionários:", err);
-        setError(`Erro ao carregar funcionários: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setLoading(false);
+  const fetchEmployees = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employees`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Falha ao carregar funcionários");
       }
-    };
-    fetchEmployees();
+      const data = await res.json();
+      setEmployees(data);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro desconhecido ao carregar funcionários."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Funções para CRUD (esqueletos)
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
+
   const handleAddEmployee = async () => {
     setError("");
-    if (!newEmployee.name || !newEmployee.email || !newEmployee.role) {
+    setMessage("");
+    if (
+      !newEmployee.name ||
+      !newEmployee.email ||
+      !newEmployee.role ||
+      !newEmployee.password
+    ) {
       setError("Preencha todos os campos para adicionar um funcionário.");
       return;
     }
     try {
-      // Implementar fetch para sua API de backend para adicionar funcionário
-      console.log("Adicionar funcionário:", newEmployee);
-      // const token = localStorage.getItem('token');
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/employees`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      //   body: JSON.stringify(newEmployee)
-      // });
-      // if (!res.ok) throw new Error('Falha ao adicionar funcionário');
-      // const addedEmployee = await res.json();
-      // setEmployees([...employees, addedEmployee]); // Adiciona o novo funcionário ao estado
-      setEmployees([...employees, {_id: String(Date.now()), ...newEmployee}]); // Simulação
-      setNewEmployee({name: "", email: "", role: ""});
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newEmployee),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Falha ao adicionar funcionário");
+      }
+
+      setMessage("Funcionário adicionado com sucesso!");
+      setNewEmployee({ name: "", email: "", role: "", password: "" });
+      await fetchEmployees(); // Recarrega a lista
     } catch (err: unknown) {
-      console.error("Erro ao adicionar funcionário:", err);
-      setError(`Erro ao adicionar funcionário: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro desconhecido ao adicionar funcionário."
+      );
     }
   };
 
   const handleUpdateEmployee = async () => {
     setError("");
-    if (!editEmployee || !editEmployee.name || !editEmployee.email || !editEmployee.role) {
-      setError("Preencha todos os campos para editar um funcionário.");
-      return;
-    }
+    setMessage("");
+    if (!editEmployee) return;
+
     try {
-      // Implementar fetch para sua API de backend para atualizar funcionário
-      console.log("Atualizar funcionário:", editEmployee);
-      // const token = localStorage.getItem('token');
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/employees/${editEmployee._id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      //   body: JSON.stringify(editEmployee)
-      // });
-      // if (!res.ok) throw new Error('Falha ao atualizar funcionário');
-      // setEmployees(employees.map(emp => emp._id === editEmployee._id ? editEmployee : emp)); // Atualiza no estado
-      setEmployees(employees.map((emp) => (emp._id === editEmployee._id ? editEmployee : emp))); // Simulação
-      setEditEmployee(null); // Fecha o formulário de edição
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employees/${editEmployee._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: editEmployee.name,
+            role: editEmployee.role,
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Falha ao atualizar funcionário");
+      }
+
+      setMessage("Funcionário atualizado com sucesso!");
+      setEditEmployee(null);
+      await fetchEmployees();
     } catch (err: unknown) {
-      console.error("Erro ao atualizar funcionário:", err);
-      setError(`Erro ao atualizar funcionário: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro desconhecido ao atualizar funcionário."
+      );
     }
   };
 
   const handleDeleteEmployee = async (id: string) => {
     setError("");
+    setMessage("");
+    if (!confirm("Tem certeza que deseja deletar este funcionário?")) return;
+
     try {
-      // Implementar fetch para sua API de backend para deletar funcionário
-      console.log("Deletar funcionário com ID:", id);
-      // const token = localStorage.getItem('token');
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/employees/${id}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // });
-      // if (!res.ok) throw new Error('Falha ao deletar funcionário');
-      // setEmployees(employees.filter(emp => emp._id !== id)); // Remove do estado
-      setEmployees(employees.filter((emp) => emp._id !== id)); // Simulação
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/employees/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Falha ao deletar funcionário");
+      }
+
+      setMessage("Funcionário deletado com sucesso.");
+      await fetchEmployees();
     } catch (err: unknown) {
-      console.error("Erro ao deletar funcionário:", err);
-      setError(`Erro ao deletar funcionário: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro desconhecido ao deletar funcionário."
+      );
     }
   };
 
-  if (loading) return <Typography>Carregando funcionários...</Typography>;
-  if (error) return <Typography color="error">{error}</Typography>;
-
   return (
-    <Container maxWidth="md" sx={{mt: 8, p: 4, bgcolor: "background.paper", borderRadius: 2, boxShadow: 3}}>
-      <Typography variant="h4" component="h1" gutterBottom textAlign="center" mb={4}>
+    <Container
+      maxWidth="md"
+      sx={{
+        mt: 8,
+        p: 4,
+        bgcolor: "background.paper",
+        borderRadius: 2,
+        boxShadow: 3,
+      }}
+    >
+      <Typography
+        variant="h4"
+        component="h1"
+        gutterBottom
+        textAlign="center"
+        mb={4}
+      >
         Gerenciamento de Funcionários
       </Typography>
 
-      {/* Formulário de Adição/Edição */}
+      {message && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {message}
+        </Alert>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Box
         component="form"
-        sx={{display: "flex", flexDirection: "column", gap: 2, mb: 4, p: 3, border: "1px solid #eee", borderRadius: "8px"}}
+        onSubmit={(e) => {
+          e.preventDefault();
+          editEmployee ? handleUpdateEmployee() : handleAddEmployee();
+        }}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          mb: 4,
+          p: 3,
+          border: "1px solid #eee",
+          borderRadius: "8px",
+        }}
       >
-        <Typography variant="h6">{editEmployee ? "Editar Funcionário" : "Adicionar Novo Funcionário"}</Typography>
+        <Typography variant="h6">
+          {editEmployee ? "Editar Funcionário" : "Adicionar Novo Funcionário"}
+        </Typography>
         <TextField
           label="Nome"
           fullWidth
           value={editEmployee ? editEmployee.name : newEmployee.name}
           onChange={(e) =>
-            editEmployee ? setEditEmployee({...editEmployee, name: e.target.value}) : setNewEmployee({...newEmployee, name: e.target.value})
+            editEmployee
+              ? setEditEmployee({ ...editEmployee, name: e.target.value })
+              : setNewEmployee({ ...newEmployee, name: e.target.value })
           }
         />
         <TextField
@@ -163,53 +250,88 @@ export default function EmployeesPage() {
           value={editEmployee ? editEmployee.email : newEmployee.email}
           onChange={(e) =>
             editEmployee
-              ? setEditEmployee({...editEmployee, email: e.target.value})
-              : setNewEmployee({...newEmployee, email: e.target.value})
+              ? setEditEmployee({ ...editEmployee, email: e.target.value })
+              : setNewEmployee({ ...newEmployee, email: e.target.value })
           }
         />
         <TextField
-          label="Cargo"
+          label="Cargo (colaborador, gerente, diretor)"
           fullWidth
           value={editEmployee ? editEmployee.role : newEmployee.role}
           onChange={(e) =>
-            editEmployee ? setEditEmployee({...editEmployee, role: e.target.value}) : setNewEmployee({...newEmployee, role: e.target.value})
+            editEmployee
+              ? setEditEmployee({ ...editEmployee, role: e.target.value })
+              : setNewEmployee({ ...newEmployee, role: e.target.value })
           }
         />
-        <Button variant="contained" color="primary" onClick={editEmployee ? handleUpdateEmployee : handleAddEmployee}>
+        {!editEmployee && (
+          <TextField
+            label="Senha"
+            type="password"
+            fullWidth
+            value={newEmployee.password}
+            onChange={(e) =>
+              setNewEmployee({ ...newEmployee, password: e.target.value })
+            }
+          />
+        )}
+        <Button type="submit" variant="contained" color="primary">
           {editEmployee ? "Salvar Edição" : "Adicionar Funcionário"}
         </Button>
         {editEmployee && (
-          <Button variant="outlined" color="secondary" onClick={() => setEditEmployee(null)}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => setEditEmployee(null)}
+          >
             Cancelar Edição
           </Button>
         )}
       </Box>
 
-      {/* Lista de Funcionários */}
       <Typography variant="h5" gutterBottom mt={4}>
         Lista de Funcionários
       </Typography>
-      <List sx={{width: "100%", bgcolor: "background.paper"}}>
-        {employees.length === 0 ? (
-          <Typography textAlign="center" color="text.secondary">
-            Nenhum funcionário cadastrado.
-          </Typography>
-        ) : (
-          employees.map((employee) => (
-            <ListItem key={employee._id} divider sx={{"&:hover": {bgcolor: "action.hover"}}}>
-              <ListItemText primary={employee.name} secondary={`Email: ${employee.email} | Cargo: ${employee.role}`} />
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <List sx={{ width: "100%", bgcolor: "background.paper" }}>
+          {employees.map((employee) => (
+            <ListItem key={employee._id} divider>
+              <ListItemText
+                primary={employee.name}
+                secondary={`Email: ${employee.email} | Cargo: ${employee.role}`}
+              />
               <ListItemSecondaryAction>
-                <IconButton edge="end" aria-label="edit" onClick={() => setEditEmployee(employee)}>
+                <IconButton
+                  edge="end"
+                  aria-label="edit"
+                  onClick={() => setEditEmployee(employee)}
+                >
                   <EditIcon />
                 </IconButton>
-                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteEmployee(employee._id)}>
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  onClick={() => handleDeleteEmployee(employee._id)}
+                >
                   <DeleteIcon />
                 </IconButton>
               </ListItemSecondaryAction>
             </ListItem>
-          ))
-        )}
-      </List>
+          ))}
+        </List>
+      )}
+
+      <Box sx={{ mt: 4, textAlign: "center" }}>
+        <Link href="/dashboard" passHref legacyBehavior>
+          <Button variant="text" color="info">
+            Voltar ao Dashboard
+          </Button>
+        </Link>
+      </Box>
     </Container>
   );
 }
